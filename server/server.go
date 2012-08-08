@@ -16,8 +16,5 @@ func main() {
 	if e != nil {
 		log.Fatal("Listen error:", e)
 	}
-	go http.Serve(l, nil)
-	log.Println("Serving")
-	for {
-	}
+	http.Serve(l, nil)
 }
