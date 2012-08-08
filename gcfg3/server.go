@@ -32,15 +32,16 @@ func (c Gcfg3Client) GetProbes() ([]Probe, error) {
 	return probes, err
 }
 
-func (c Gcfg3Client) SendProbeData(d []Probe) error {
-	err := c.Client.Call("Gcfg3Server.SendProbeData", d, Empty{})
+func (c Gcfg3Client) SendProbeData(d []ProbeData) error {
+	var r Empty
+	err := c.Client.Call("Gcfg3Server.SendProbeData", d, &r)
 	return err
 }
 
 type Gcfg3Server struct{}
 
 func (s Gcfg3Server) GetProbes(e Empty, p *[]Probe) error {
-	hostname := Probe{"hostname", "#!/bin/bash\nhostname\n"}
+	hostname := Probe{"hostname", "#!/bin/bash\necho hostname:$(hostname)\n"}
 	*p = append(*p, hostname)
 	return nil
 }
