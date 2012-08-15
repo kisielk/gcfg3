@@ -82,7 +82,6 @@ func main() {
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
-	log.Println("Connected")
 
 	probes, err := client.GetProbes()
 	if err != nil {
@@ -91,7 +90,6 @@ func main() {
 
 	var probeData []gcfg3.ProbeData
 	for _, probe := range probes {
-		log.Println(probe.Script)
 		r, err := runScript(probe.Script, 10*time.Second)
 		if err != nil {
 			log.Printf("error in probe '%s': %s\n", probe.Name, err)
@@ -107,4 +105,9 @@ func main() {
 		probeData = append(probeData, pd...)
 	}
 	client.SendProbeData(probeData)
+
+	entries, err := client.GetEntries()
+	for _, entry := range entries {
+		log.Printf("%s", entry)
+	}
 }

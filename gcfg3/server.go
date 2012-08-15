@@ -1,8 +1,12 @@
 package gcfg3
 
 import (
+	"bytes"
+	"io/ioutil"
 	"log"
 	"net/rpc"
+	"os"
+	"path/filepath"
 )
 
 type Empty struct{}
@@ -19,6 +23,37 @@ type ProbeData struct {
 
 type Gcfg3Client struct {
 	Client *rpc.Client
+}
+
+type ConfigEntry interface {
+	Install() error
+}
+
+type FileEntry struct {
+	Path     string
+	Contents string
+}
+
+func (e FileEntry) Install() error {
+	tempFile, err := ioutil.TempFile("", "gcfg3")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempFile.Name())
+
+	buf := bytes.NewBufferString(e.Contents)
+	_, err = buf.WriteTo(tempFile)
+	if err != nil {
+		return err
+	}
+	tempFile.Close()
+
+	err = os.Rename(tempFile.Name(), e.Path)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func NewGcfg3Client(addr string) (Gcfg3Client, error) {
@@ -38,11 +73,41 @@ func (c Gcfg3Client) SendProbeData(d []ProbeData) error {
 	return err
 }
 
-type Gcfg3Server struct{}
+func (c Gcfg3Client) GetEntries() ([]ConfigEntry, error) {
+	var entries []ConfigEntry
+	err := c.Client.Call("Gcfg3Server.GetEntries", Empty{}, &entries)
+	return entries, err
+}
+
+type Gcfg3Server struct {
+	Root string
+}
 
 func (s Gcfg3Server) GetProbes(e Empty, p *[]Probe) error {
-	hostname := Probe{"hostname", "#!/bin/bash\necho hostname:$(hostname)\n"}
-	*p = append(*p, hostname)
+	probeDir := filepath.Join(s.Root, "probes")
+	probeContents, err := ioutil.ReadDir(probeDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range probeContents {
+		if entry.IsDir() {
+			continue
+		}
+
+		entryPath := filepath.Join(probeDir, entry.Name())
+		contents, err := ioutil.ReadFile(entryPath)
+		if err != nil {
+			continue
+		}
+
+		*p = append(*p, Probe{entry.Name(), string(contents)})
+	}
+	return nil
+}
+
+func (s Gcfg3Server) GetEntries(n Empty, e *[]ConfigEntry) error {
+	file := FileEntry{"/tmp/foo", "contents"}
+	*e = append(*e, file)
 	return nil
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	server := gcfg3.Gcfg3Server{}
+	server := gcfg3.Gcfg3Server{"."}
 	rpc.Register(server)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":1234")
